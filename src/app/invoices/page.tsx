@@ -10,6 +10,16 @@ type InvoiceRow = {
 };
 
 export default async function InvoicesPage() {
+  // Skip auth check during build
+  if (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-semibold">Invoices</h1>
+        <p className="text-slate-600">Configure environment variables to view invoices.</p>
+      </div>
+    );
+  }
+
   const supabase = createSupabaseServerClient();
   const {
     data: { user }

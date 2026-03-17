@@ -83,19 +83,34 @@ export default async function PublicBookingPage({
         </div>
       ) : null}
 
-      <form action={createBooking.bind(null, slug)} className="space-y-6 rounded-lg border bg-white p-6 shadow-sm">
+      <form action={createBooking} className="space-y-6 rounded-lg border bg-white p-6 shadow-sm">
+        <input type="hidden" name="notaryId" value={slug} />
         <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-900" htmlFor="startAt">
-              Date & time
-            </label>
-            <input
-              id="startAt"
-              name="startAt"
-              type="datetime-local"
-              required
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-500 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-900" htmlFor="startAt">
+                Date
+              </label>
+              <input
+                id="startAt"
+                name="date"
+                type="date"
+                required
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-500 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-900" htmlFor="time">
+                Time
+              </label>
+              <input
+                id="time"
+                name="time"
+                type="time"
+                required
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-500 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              />
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -105,7 +120,7 @@ export default async function PublicBookingPage({
               </label>
               <input
                 id="name"
-                name="name"
+                name="clientName"
                 type="text"
                 required
                 placeholder="Jane Doe"
@@ -119,7 +134,7 @@ export default async function PublicBookingPage({
               </label>
               <input
                 id="email"
-                name="email"
+                name="clientEmail"
                 type="email"
                 required
                 placeholder="jane@example.com"
@@ -135,7 +150,7 @@ export default async function PublicBookingPage({
               </label>
               <input
                 id="phone"
-                name="phone"
+                name="clientPhone"
                 type="tel"
                 placeholder="(555) 123-4567"
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-500 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
