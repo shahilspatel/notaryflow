@@ -1,7 +1,3 @@
-<<<<<<< Updated upstream
-# notaryflow
-Vertical SaaS for loan signing agents to manage bookings, invoices, payments, and mileage.
-=======
 # NotaryFlow
 
 Professional business management platform for loan signing agents. Accept bookings, sync to Google Calendar, track clients, generate invoices, collect payments, and export records for taxes.
@@ -238,4 +234,3 @@ MIT License — use, modify, and distribute freely.
 ---
 
 **Ready to launch?** This codebase runs production notary businesses today. Deploy now and start serving clients.
->>>>>>> Stashed changes
