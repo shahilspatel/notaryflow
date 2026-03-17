@@ -7,6 +7,9 @@ function formatMoney(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(dollars);
 }
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const supabase = createSupabaseServerClient();
   const {
@@ -42,7 +45,7 @@ export default async function DashboardPage() {
       .gte('created_at', currentMonth.toISOString())
   ]);
 
-  const totalRevenue = revenueData?.reduce((sum, inv) => sum + (inv.total_cents || 0), 0) || 0;
+  const totalRevenue = revenueData?.reduce((sum: number, inv: any) => sum + (inv.total_cents || 0), 0) || 0;
 
   const bookingUrl = profile?.booking_slug
     ? `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/book/${profile.booking_slug}`

@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=google-oauth-failed`);
   }
 
-  const tokens = await exchangeCodeForTokens(code);
+  const tokens = await exchangeCodeForTokens(code) as { access_token: string; refresh_token?: string; expiry_date?: string; };
   if (!tokens.access_token) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=google-oauth-failed`);
   }

@@ -2,6 +2,9 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { openCustomerPortal, startCheckout } from './actions';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default async function BillingPage({
   searchParams
 }: {
