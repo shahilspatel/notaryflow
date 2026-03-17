@@ -69,3 +69,55 @@ export async function createStripeInvoice({
     return null;
   }
 }
+
+/**
+ * Creates a Stripe Checkout session for invoice payment.
+ * 
+ * Args:
+ *   invoiceId: UUID of the invoice
+ *   clientEmail: Email of the client
+ *   clientName: Name of the client
+ * 
+ * Returns:
+ *   Checkout session URL or null if creation fails
+ */
+export async function createStripeCheckoutSession({
+  invoiceId,
+  clientEmail,
+  clientName
+}: {
+  invoiceId: string;
+  clientEmail: string;
+  clientName: string;
+}) {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      customer_email: clientEmail,
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Notary Signing Service',
+              description: `Service for ${clientName}`,
+            },
+            unit_amount: 15000, // $150.00 in cents
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/book/confirmed?payment=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/book/confirmed?payment=cancelled`,
+      metadata: {
+        invoice_id: invoiceId,
+      },
+    });
+
+    return session.url;
+  } catch (error) {
+    console.error('Failed to create Stripe Checkout session:', error);
+    return null;
+  }
+}

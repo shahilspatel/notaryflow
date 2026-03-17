@@ -230,7 +230,3 @@ npm run test:e2e
 ## License
 
 MIT License — use, modify, and distribute freely.
-
----
-
-**Ready to launch?** This codebase runs production notary businesses today. Deploy now and start serving clients.
