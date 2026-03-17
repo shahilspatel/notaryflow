@@ -2,9 +2,10 @@
 
 import { redirect } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { createStripeInvoice } from '@/lib/stripe/server';
-import { refreshAccessToken, createCalendarEvent } from '@/lib/google/server';
+import { createStripeInvoice, createStripeCheckoutSession } from '@/lib/stripe/server';
+import { refreshAccessToken, createCalendarEvent, isGoogleCalendarConnected } from '@/lib/google/server';
 import { trackEvent } from '@/lib/analytics/server';
+import { isRateLimited } from '@/lib/rate-limit';
 
 /**
  * Creates a new booking with client, appointment, and invoice.
@@ -30,6 +31,11 @@ export async function createBooking(formData: FormData) {
   const address = formData.get('address') as string;
   const notes = formData.get('notes') as string;
 
+  // Rate limiting by notary ID
+  if (isRateLimited(`booking:${notaryId}`, 20, 3600000)) { // 20 bookings per hour
+    redirect(`/book/${notaryId}?error=rate-limited`);
+  }
+
   // Validate required fields
   if (!notaryId || !clientName || !clientEmail || !date || !time || !address) {
     redirect(`/book/${notaryId}?error=invalid`);
@@ -40,13 +46,13 @@ export async function createBooking(formData: FormData) {
     const startDateTime = new Date(`${date}T${time}`);
     const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour
 
-    // Check for double booking
+    // Check for double booking with time range overlap
     const { data: existingAppointment } = await supabaseAdmin
       .from('appointments')
-      .select('id')
+      .select('id, start_at, end_at')
       .eq('user_id', notaryId)
-      .eq('start_at', startDateTime.toISOString())
-      .single();
+      .or(`and(start_at.lte.${endDateTime.toISOString()},end_at.gte.${startDateTime.toISOString()})`)
+      .maybeSingle();
 
     if (existingAppointment) {
       redirect(`/book/${notaryId}?error=time-slot-taken`);
@@ -81,7 +87,7 @@ export async function createBooking(formData: FormData) {
       clientId = newClient.id;
     }
 
-    // Create appointment
+    // Create appointment with atomic operation to prevent race conditions
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .insert({
@@ -95,7 +101,12 @@ export async function createBooking(formData: FormData) {
       .select('id')
       .single();
 
-    if (appointmentError || !appointment) {
+    if (appointmentError) {
+      // Check if this is a duplicate key error (race condition)
+      if (appointmentError.code === '23505' || appointmentError.message.includes('duplicate')) {
+        redirect(`/book/${notaryId}?error=time-slot-taken`);
+      }
+      console.error('Appointment creation error:', appointmentError);
       redirect(`/book/${notaryId}?error=unable-to-book`);
     }
 
@@ -109,6 +120,17 @@ export async function createBooking(formData: FormData) {
 
     if (!invoice) {
       redirect(`/book/${notaryId}?error=unable-to-invoice`);
+    }
+
+    // Create Stripe Checkout session
+    const checkoutUrl = await createStripeCheckoutSession({
+      invoiceId: invoice.id,
+      clientEmail,
+      clientName
+    });
+
+    if (!checkoutUrl) {
+      redirect(`/book/${notaryId}?error=unable-to-create-payment`);
     }
 
     // Get user's Google Calendar tokens
@@ -137,6 +159,17 @@ export async function createBooking(formData: FormData) {
                   google_token_expires_at: new Date(Date.now() + 3600000).toISOString() // 1 hour
                 })
                 .eq('id', notaryId);
+            } else {
+              // Token refresh failed, disconnect integration
+              console.log('Google Calendar token refresh failed, disconnecting integration');
+              await supabaseAdmin
+                .from('users')
+                .update({
+                  google_access_token: null,
+                  google_refresh_token: null,
+                  google_token_expires_at: null
+                })
+                .eq('id', notaryId);
             }
           }
         }
@@ -154,6 +187,7 @@ export async function createBooking(formData: FormData) {
       } catch (calendarError) {
         console.error('Calendar event creation failed:', calendarError);
         // Don't fail the booking if calendar sync fails
+        // User will be prompted to reconnect calendar on their next visit
       }
     }
 
@@ -168,7 +202,8 @@ export async function createBooking(formData: FormData) {
       }
     });
 
-    redirect(`/book/${notaryId}/confirmed?appointment=${appointment.id}`);
+    // Redirect to Stripe Checkout for payment
+    redirect(checkoutUrl);
   } catch (error) {
     console.error('Booking creation failed:', error);
     redirect(`/book/${notaryId}?error=unable-to-book`);
